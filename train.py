@@ -8,12 +8,14 @@ import torch
 import torch.nn as nn
 from torch import optim
 from tqdm import tqdm
+import torchvision
 
 from eval import eval_net
 from unet import UNet
 
 from torch.utils.tensorboard import SummaryWriter
 from utils.dataset import BasicDataset
+from utils.transforms import original_transform, teacher_transform
 from torch.utils.data import DataLoader, random_split
 
 dir_img = 'data/imgs/'
@@ -29,8 +31,13 @@ def train_net(net,
               val_percent=0.1,
               save_cp=True,
               img_scale=0.5):
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # /unet
 
-    dataset = BasicDataset(dir_img, dir_mask, img_scale)
+    dataroot = os.path.join(os.path.dirname(base_path), "datasets")
+    dataroot = "../datasets"
+    # dataset = BasicDataset(dir_img, dir_mask, img_scale)
+    dataset = torchvision.datasets.VOCSegmentation(dataroot, year='2012', image_set='train', download=True,
+                                                    transform=original_transform, target_transform=teacher_transform)
     n_val = int(len(dataset) * val_percent)
     n_train = len(dataset) - n_val
     train, val = random_split(dataset, [n_train, n_val])
@@ -154,7 +161,7 @@ if __name__ == '__main__':
     #   - For 1 class and background, use n_classes=1
     #   - For 2 classes, use n_classes=1
     #   - For N > 2 classes, use n_classes=N
-    net = UNet(n_channels=3, n_classes=1, bilinear=True)
+    net = UNet(n_channels=3, n_classes=21, bilinear=True)
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
                  f'\t{net.n_classes} output channels (classes)\n'
@@ -184,4 +191,4 @@ if __name__ == '__main__':
         try:
             sys.exit(0)
         except SystemExit:
-            os._exit(0)
+            os.exit(0)
